@@ -12,10 +12,18 @@ from openpyxl.styles import Font, Border, Side, PatternFill, Alignment
 st.set_page_config(page_title="Smart Batcher", page_icon="📊", layout="wide")
 st.title("📊 Smart Batcher - Easy Batching")
 
+with st.expander("📖 View User Manual"):
+    st.write("""
+    1. **Prepare Class List:** Ensure headers i.e class names match the team names label.
+    2. **Prepare Team Names Tables:** Column A must contain the Class Name that matches your Participants List (e.g., "D2A").
+    3. **Team Names Table** Columns B & C (and so on): Should contain the corresponding table of Team Names
+    4. **Upload & Run:** Use the sidebar to set a password if needed.
+    """)
+
 # --- SIDEBAR SETTINGS ---
 st.sidebar.header("Security Settings")
 enable_protection = st.sidebar.checkbox("Enable Password Protection", value=True)
-custom_password = "Gemini2026"
+custom_password = "Smart_File_Lock"
 if enable_protection:
     custom_password = st.sidebar.text_input("Set Sheet Password", value="Gemini2026", type="password")
 
@@ -204,3 +212,4 @@ if items_file and template_file:
 
         except Exception as e:
             st.error(f"An error occurred: {e}")
+
