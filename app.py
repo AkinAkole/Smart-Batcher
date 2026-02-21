@@ -13,7 +13,7 @@ st.set_page_config(page_title="Smart Batcher", page_icon="📊", layout="wide")
 st.title("📊 Smart Batcher - Easy Batching")
 
 # --- SIDEBAR SETTINGS ---
-st.sidebar.header("Security Settings")
+st.sidebar.header("Security & Tools")
 enable_protection = st.sidebar.checkbox("Enable Password Protection", value=True)
 custom_password = "Smart_File_Lock"
 if enable_protection:
@@ -187,6 +187,9 @@ with tab1:
                 if enable_protection: summary_sheet.protection.set_password(custom_password)
                 for col in ['A', 'B', 'C', 'D']: summary_sheet.column_dimensions[col].width = 25
 
+                # Save for search feature
+                st.session_state['active_wb'] = wb_out
+
                 # --- 5. BROWSER DASHBOARD ---
                 st.divider()
                 sum_df = pd.DataFrame(browser_summary_data)
@@ -218,6 +221,29 @@ with tab1:
 
             except Exception as e:
                 st.error(f"Error: {e}")
+
+# --- SEARCH FEATURE IN SIDEBAR ---
+if 'active_wb' in st.session_state:
+    st.sidebar.divider()
+    st.sidebar.subheader("🔍 Find Participant")
+    search_query = st.sidebar.text_input("Enter name to search:").strip().lower()
+    
+    if search_query:
+        matches = []
+        wb = st.session_state['active_wb']
+        for sheetname in wb.sheetnames:
+            if sheetname == "Distribution Summary": continue
+            ws = wb[sheetname]
+            for row in ws.iter_rows(values_only=True):
+                for val in row:
+                    if val and search_query in str(val).lower():
+                        matches.append({"Name": val, "Group": sheetname})
+        
+        if matches:
+            for m in matches:
+                st.sidebar.success(f"**Found!**\n\n**Name:** {m['Name']}\n\n**Class:** {m['Group']}")
+        else:
+            st.sidebar.warning("No participant found.")
 
 with tab2:
     st.header("📘 Smart Batcher User Manual")
