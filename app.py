@@ -31,9 +31,9 @@ def format_as_integer_string(v):
 # --- FILE UPLOADERS ---
 col1, col2 = st.columns(2)
 with col1:
-    items_file = st.file_uploader("Upload Item List (Excel)", type=['xlsx'])
+    items_file = st.file_uploader("Upload Participants List (Class List)", type=['xlsx'])
 with col2:
-    template_file = st.file_uploader("Upload Matrix Template (Excel)", type=['xlsx'])
+    template_file = st.file_uploader("Upload Team Names (With Class Label)", type=['xlsx'])
 
 if items_file and template_file:
     if st.button("🚀 Generate Distribution"):
@@ -158,4 +158,5 @@ if items_file and template_file:
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
         except Exception as e:
+
             st.error(f"An error occurred: {e}")
