@@ -12,14 +12,57 @@ from openpyxl.styles import Font, Border, Side, PatternFill, Alignment
 st.set_page_config(page_title="Smart Batcher", page_icon="📊", layout="wide")
 st.title("📊 Smart Batcher - Easy Batching")
 
-with st.expander("📖 View User Manual"):
+# Create Tabs
+tab1, tab2 = st.tabs(["🚀 Generator", "📖 User Manual"])
+
+with tab1:
+    # --- YOUR EXISTING GENERATOR CODE GOES HERE ---
+    st.markdown("Upload your files below to generate the distribution.")
+    # (Move your columns, uploaders, and buttons inside this 'with tab1' block)
+
+with tab2:
+    st.header("📘 Smart Batcher User Manual")
+    
+    st.subheader("1. How it Works")
     st.write("""
-    1. **Prepare Class List:** Ensure headers i.e class names match the team names label.
-    2. **Prepare Team Names Tables:** Column A must contain the Class Name that matches your Participants List (e.g., "D2A").
-    3. **Team Names Table** Columns B & C (and so on): Should contain the corresponding table of Team Names
-    4. **Upload & Run:** Use the sidebar to set a password if needed.
+    Smart Batcher automates the randomization of participants into team structures 
+    defined by your template. It ensures no team is over-filled and shuffles 
+    participants to maintain fairness.
     """)
 
+    col_m1, col_m2 = st.columns(2)
+    with col_m1:
+        st.info("**File A: Participants List**")
+        st.write("""
+        - **Format:** Excel (.xlsx)
+        - **Headers:** Top row must be Class Names (e.g., *Class A*, *Class B*).
+        - **Data:** List names directly under the headers.
+        """)
+        
+    with col_m2:
+        st.info("**File B: Team Template**")
+        st.write("""
+        - **Format:** Excel (.xlsx)
+        - **Column A:** Must contain the Class Name (must match File A).
+        - **Columns B, C, etc:** Contains the Team Names for that class.
+        """)
+
+    st.divider()
+    
+    st.subheader("2. Step-by-Step Guide")
+    st.markdown("""
+    1. **Set Security:** Use the sidebar to enable/disable password protection.
+    2. **Upload Files:** Drag and drop your Participants List and Team Names.
+    3. **Generate:** Click the 'Generate' button to see the dashboard.
+    4. **Download:** Save your final report via the download button.
+    """)
+
+    # Optional: Keep the PDF download button here too!
+    try:
+        with open("User_Manual.pdf", "rb") as f:
+            st.download_button("📥 Download PDF version", f, "Manual.pdf")
+    except:
+        st.caption("PDF version currently unavailable.")
 # --- SIDEBAR SETTINGS ---
 st.sidebar.header("Security Settings")
 enable_protection = st.sidebar.checkbox("Enable Password Protection", value=True)
@@ -212,5 +255,6 @@ if items_file and template_file:
 
         except Exception as e:
             st.error(f"An error occurred: {e}")
+
 
 
