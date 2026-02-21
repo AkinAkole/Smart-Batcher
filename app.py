@@ -15,19 +15,21 @@ st.title("📊 Smart Batcher - Easy Batching")
 # --- SIDEBAR SETTINGS ---
 st.sidebar.header("Security Settings")
 enable_protection = st.sidebar.checkbox("Enable Password Protection", value=True)
-custom_password = "Gemini2026"
+custom_password = "Smart_File_Lock"
 if enable_protection:
-    custom_password = st.sidebar.text_input("Set Sheet Password", value="Gemini2026", type="password")
+    custom_password = st.sidebar.text_input("Set Sheet Password", value="Smart_File_Lock", type="password")
 
-# --- TABS ---
-tab1, tab2 = st.tabs(["🚀 Generator", "📖 User Manual & Samples"])
+# --- TABS SETUP ---
+tab1, tab2 = st.tabs(["🚀 Generator", "📖 User Manual"])
 
 with tab1:
-    st.markdown("### Step 1: Upload your files")
-    col_u1, col_u2 = st.columns(2)
-    with col_u1:
+    st.markdown("Upload your files below to generate the distribution.")
+    
+    # --- FILE UPLOADERS ---
+    col1, col2 = st.columns(2)
+    with col1:
         items_file = st.file_uploader("Upload Participants List (Class List)", type=['xlsx'])
-    with col_u2:
+    with col2:
         template_file = st.file_uploader("Upload Team Names (With Class Label)", type=['xlsx'])
 
     if items_file and template_file:
@@ -39,10 +41,12 @@ with tab1:
                 
                 wb_tmpl = load_workbook(template_file, data_only=True)
                 ws_tmpl = wb_tmpl.worksheets[0]
-                first_col_map = {clean_val(ws_tmpl.cell(row=r, column=1).value): r 
+                
+                # Create a map of Column A (Cleaned) to Row Number
+                first_col_map = {re.sub(r'[^a-zA-Z0-9]', '', str(ws_tmpl.cell(row=r, column=1).value)).lower(): r 
                                  for r in range(1, ws_tmpl.max_row + 1) if ws_tmpl.cell(row=r, column=1).value}
 
-                # 2. Setup Workbook
+                # 2. Setup Output Workbook
                 wb_out = Workbook()
                 summary_sheet = wb_out.active
                 summary_sheet.title = "Distribution Summary"
@@ -50,7 +54,10 @@ with tab1:
                 now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 summary_sheet.cell(row=1, column=1, value=f"Generated on: {now}").font = Font(italic=True)
                 
-                # Setup Styles
+                if enable_protection:
+                    summary_sheet.cell(row=2, column=1, value="Note: Sheets are password protected.").font = Font(size=9, color="FF0000")
+                
+                # Styles
                 summary_header_fill = PatternFill(start_color="2C3E50", end_color="2C3E50", fill_type="solid")
                 summary_text_font = Font(color="FFFFFF", bold=True)
                 team_header_fill = PatternFill(start_color="D6EAF8", end_color="D6EAF8", fill_type="solid")
@@ -65,13 +72,13 @@ with tab1:
                 summary_row, sheets_created = 5, 0
                 browser_summary_data = []
                 
-                # Totals Trackers
-                grand_total_teams = 0
-                grand_total_items = 0
+                # Grand Totals Trackers
+                total_teams_acc = 0
+                total_items_acc = 0
 
                 # 3. Process Logic
                 for header in group_headers:
-                    target = clean_val(header)
+                    target = re.sub(r'[^a-zA-Z0-9]', '', str(header)).lower()
                     if target not in first_col_map:
                         summary_sheet.cell(row=summary_row, column=1, value=header)
                         summary_sheet.cell(row=summary_row, column=2, value="Skipped: No match")
@@ -80,9 +87,13 @@ with tab1:
                         continue
                     
                     anchor_r = first_col_map[target]
-                    items = df_items[header].dropna().apply(lambda x: re.sub(r'\.0$', '', str(x).strip())).tolist()
+                    
+                    # Clean items logic
+                    items_raw = df_items[header].dropna().tolist()
+                    items = [str(i)[:-2] if str(i).endswith('.0') else str(i).strip() for i in items_raw]
                     random.shuffle(items)
 
+                    # Extract matrix teams
                     matrix_blocks, curr_r, team_count = [], anchor_r, 0
                     while curr_r <= ws_tmpl.max_row:
                         row_teams = []
@@ -103,57 +114,112 @@ with tab1:
                         browser_summary_data.append({"Group": header, "Teams": team_count, "Items": len(items), "Status": "⚠️ Empty"})
                         continue
 
-                    # Success Logic
-                    ws_out = wb_out.create_sheet(title=str(header))
+                    # Create Class Sheet
+                    ws_out = wb_out.create_sheet(title=str(header)[:30])
                     sheets_created += 1
                     if enable_protection: ws_out.protection.set_password(custom_password)
 
+                    # Update Excel Summary
                     summary_sheet.cell(row=summary_row, column=1, value=header)
                     summary_sheet.cell(row=summary_row, column=2, value=f"Row {anchor_r}")
                     summary_sheet.cell(row=summary_row, column=3, value=team_count)
                     summary_sheet.cell(row=summary_row, column=4, value=len(items))
                     
-                    # Accumulate Totals
-                    grand_total_teams += team_count
-                    grand_total_items += len(items)
-                    
+                    # Accumulate for Grand Total
+                    total_teams_acc += team_count
+                    total_items_acc += len(items)
                     summary_row += 1
                     browser_summary_data.append({"Group": header, "Teams": team_count, "Items": len(items), "Status": "✅ Success"})
 
-                    # ... [Internal Distribution Logic same as before] ...
-                    # (Simplified for brevity in display, keep your existing logic here)
+                    # Distribute Items
+                    max_widths, sn_width = {}, 11.9
+                    ws_out.column_dimensions['A'].width = sn_width
+                    flat_teams = [t for block in matrix_blocks for t in block]
+                    avg, rem = divmod(len(items), len(flat_teams))
+                    item_ptr, out_r = 1, 1
 
-                # --- 4. ADD TOTALS ROW TO EXCEL SUMMARY ---
-                total_label_cell = summary_sheet.cell(row=summary_row, column=1, value="GRAND TOTAL")
-                total_teams_cell = summary_sheet.cell(row=summary_row, column=3, value=grand_total_teams)
-                total_items_cell = summary_sheet.cell(row=summary_row, column=4, value=grand_total_items)
-                
-                for cell in [total_label_cell, total_teams_cell, total_items_cell]:
-                    cell.font = Font(bold=True)
-                    cell.fill = PatternFill(start_color="ECF0F1", end_color="ECF0F1", fill_type="solid")
+                    for block in matrix_blocks:
+                        max_block_h = 0
+                        for team in block:
+                            col_let_sn = ws_out.cell(row=1, column=team['col']).column_letter
+                            ws_out.column_dimensions[col_let_sn].width = sn_width
+                            c1, c2 = ws_out.cell(row=out_r, column=team['col'], value=team['s']), ws_out.cell(row=out_r, column=team['col']+1, value=team['n'])
+                            for cell in [c1, c2]:
+                                cell.font, cell.fill, cell.border = Font(bold=True), team_header_fill, no_border
+                            col_let_data = ws_out.cell(row=1, column=team['col']+1).column_letter
+                            max_widths[col_let_data] = max(max_widths.get(col_let_data, 0), len(str(team['n'])))
 
-                # Final Excel Cleanup
+                        for team in block:
+                            t_idx = flat_teams.index(team)
+                            count = avg + (1 if t_idx < rem else 0)
+                            max_block_h = max(max_block_h, count)
+                            for i in range(1, count + 1):
+                                if item_ptr <= len(items):
+                                    val = items[item_ptr-1]
+                                    c_idx, c_val = ws_out.cell(row=out_r + i, column=team['col'], value=i), ws_out.cell(row=out_r + i, column=team['col']+1, value=val)
+                                    c_idx.fill, c_idx.border, c_val.border = sn_column_fill, no_border, no_border
+                                    c_val.number_format = '@'
+                                    item_ptr += 1
+                        out_r += (max_block_h + 3)
+
+                # --- ADD GRAND TOTALS TO EXCEL ---
+                sum_label = summary_sheet.cell(row=summary_row, column=1, value="GRAND TOTAL")
+                sum_teams = summary_sheet.cell(row=summary_row, column=3, value=total_teams_acc)
+                sum_items = summary_sheet.cell(row=summary_row, column=4, value=total_items_acc)
+                for c in [sum_label, sum_teams, sum_items]:
+                    c.font = Font(bold=True)
+                    c.fill = PatternFill(start_color="D3D3D3", end_color="D3D3D3", fill_type="solid")
+
+                # Excel Final Touches
                 if enable_protection: summary_sheet.protection.set_password(custom_password)
                 for col in ['A', 'B', 'C', 'D']: summary_sheet.column_dimensions[col].width = 25
 
-                # --- 5. BROWSER DASHBOARD ---
+                # --- STREAMLIT DASHBOARD ---
                 st.divider()
                 sum_df = pd.DataFrame(browser_summary_data)
+                
                 m1, m2, m3 = st.columns(3)
                 m1.metric("Total Classes", len(sum_df))
-                m2.metric("Total Items", grand_total_items)
-                m3.metric("Total Teams", grand_total_teams)
+                m2.metric("Total Items (Grand Total)", total_items_acc)
+                m3.metric("Total Teams (Grand Total)", total_teams_acc)
 
-                left_col, right_col = st.columns([1, 1])
-                with left_col:
+                left, right = st.columns([1, 1])
+                with left:
+                    st.subheader("📋 Browser Summary")
                     st.dataframe(sum_df.style.background_gradient(cmap="Blues", subset=["Items"]), use_container_width=True, hide_index=True)
-                with right_col:
+                with right:
+                    st.subheader("🥧 Distribution Composition")
                     fig = px.pie(sum_df[sum_df["Items"] > 0], values='Items', names='Group', hole=0.4)
                     st.plotly_chart(fig, use_container_width=True)
 
                 output = io.BytesIO()
                 wb_out.save(output)
-                st.download_button("📥 Download Final Output", output.getvalue(), "Smart_Batcher_Results.xlsx")
+                st.success("✅ Distribution Ready!")
+                st.download_button(label="📥 Download Smart Batcher Excel", data=output.getvalue(), file_name="Smart_Batcher_Results.xlsx")
 
             except Exception as e:
                 st.error(f"Error: {e}")
+
+with tab2:
+    st.header("📘 Smart Batcher User Manual")
+    
+    st.subheader("1. How it Works")
+    st.write("Automatically distribute participants into pre-set team matrix structures via randomization.")
+
+    col_m1, col_m2 = st.columns(2)
+    with col_m1:
+        st.info("**File A: Participants List**")
+        st.write("- **Format:** .xlsx\n- **Headers:** Top row must be Class Names.\n- **Data:** List names under headers.")
+    with col_m2:
+        st.info("**File B: Team Template**")
+        st.write("- **Format:** .xlsx\n- **Column A:** Class Names (must match File A).\n- **Columns B, C, etc:** Team names/numbers.")
+
+    st.divider()
+    st.subheader("2. Step-by-Step Guide")
+    st.markdown("1. **Set Security:** Use the sidebar to enable/disable sheet passwords.\n2. **Upload Files:** Drag and drop both Excel files.\n3. **Generate:** Click to see the visual dashboard.\n4. **Download:** Get your professional, protected Excel report.")
+
+    try:
+        with open("User_Manual.pdf", "rb") as f:
+            st.download_button("📥 Download PDF Manual", f, "Smart_Batcher_Manual.pdf")
+    except:
+        st.caption("PDF Manual file not found in directory.")
