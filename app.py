@@ -25,7 +25,7 @@ st.sidebar.header("Security Settings")
 enable_protection = st.sidebar.checkbox("Enable Password Protection", value=True)
 custom_password = "Smart_File_Lock"
 if enable_protection:
-    custom_password = st.sidebar.text_input("Set Sheet Password", value="Gemini2026", type="password")
+    custom_password = st.sidebar.text_input("Set Sheet Password", value="Smart_File_Lock", type="password")
 
 st.markdown("Upload your files below to generate the distribution.")
 
@@ -212,4 +212,5 @@ if items_file and template_file:
 
         except Exception as e:
             st.error(f"An error occurred: {e}")
+
 
