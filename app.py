@@ -9,7 +9,7 @@ from openpyxl.styles import Font, Border, Side, PatternFill, Alignment
 
 # --- STREAMLIT UI SETUP ---
 st.set_page_config(page_title="Matrix Distributer", page_icon="📊")
-st.title("📊 Sequential Matrix Distribution")
+st.title("📊 Smart Batcher - Easy Batching")
 st.markdown("Upload your files below to generate the distribution.")
 
 # --- SETTINGS & STYLES ---
@@ -160,3 +160,4 @@ if items_file and template_file:
         except Exception as e:
 
             st.error(f"An error occurred: {e}")
+
