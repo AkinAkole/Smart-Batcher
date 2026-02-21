@@ -3,7 +3,7 @@ import pandas as pd
 import random
 import re
 import io
-import plotly.express as px  # Added for the composition chart
+import plotly.express as px
 from datetime import datetime
 from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Font, Border, Side, PatternFill, Alignment
@@ -11,10 +11,17 @@ from openpyxl.styles import Font, Border, Side, PatternFill, Alignment
 # --- STREAMLIT UI SETUP ---
 st.set_page_config(page_title="Smart Batcher", page_icon="📊", layout="wide")
 st.title("📊 Smart Batcher - Easy Batching")
+
+# --- SIDEBAR SETTINGS ---
+st.sidebar.header("Security Settings")
+enable_protection = st.sidebar.checkbox("Enable Password Protection", value=True)
+custom_password = "Gemini2026"
+if enable_protection:
+    custom_password = st.sidebar.text_input("Set Sheet Password", value="Gemini2026", type="password")
+
 st.markdown("Upload your files below to generate the distribution.")
 
 # --- SETTINGS & STYLES ---
-SHEET_PASSWORD = "Gemini2026"
 summary_header_fill = PatternFill(start_color="2C3E50", end_color="2C3E50", fill_type="solid")
 summary_text_font = Font(color="FFFFFF", bold=True)
 team_header_fill = PatternFill(start_color="D6EAF8", end_color="D6EAF8", fill_type="solid")
@@ -55,7 +62,9 @@ if items_file and template_file:
             
             now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             summary_sheet.cell(row=1, column=1, value=f"Generated on: {now}").font = Font(italic=True)
-            summary_sheet.cell(row=2, column=1, value="Note: Sheets are password protected.").font = Font(size=9, color="FF0000")
+            
+            if enable_protection:
+                summary_sheet.cell(row=2, column=1, value="Note: Sheets are password protected.").font = Font(size=9, color="FF0000")
             
             headers = ["Group Header", "Status / Row", "Teams Count", "Total Items"]
             for idx, text in enumerate(headers, 1):
@@ -63,9 +72,9 @@ if items_file and template_file:
                 cell.font, cell.fill, cell.alignment = summary_text_font, summary_header_fill, Alignment(horizontal="center")
 
             summary_row, sheets_created = 5, 0
-            browser_summary_data = [] # For web display
+            browser_summary_data = []
 
-            # 3. Process Logic (Your customized core logic)
+            # 3. Process Logic
             for header in group_headers:
                 target = clean_val(header)
                 if target not in first_col_map:
@@ -101,7 +110,10 @@ if items_file and template_file:
 
                 ws_out = wb_out.create_sheet(title=str(header))
                 sheets_created += 1
-                ws_out.protection.set_password(SHEET_PASSWORD)
+                
+                # --- CONDITIONAL PROTECTION ---
+                if enable_protection:
+                    ws_out.protection.set_password(custom_password)
 
                 summary_sheet.cell(row=summary_row, column=1, value=header)
                 summary_sheet.cell(row=summary_row, column=2, value=f"Row {anchor_r}")
@@ -109,7 +121,6 @@ if items_file and template_file:
                 summary_sheet.cell(row=summary_row, column=4, value=len(items))
                 summary_row += 1
                 
-                # Add to browser summary
                 browser_summary_data.append({"Group": header, "Teams": team_count, "Items": len(items), "Status": "✅ Success"})
 
                 max_widths, sn_width = {}, 11.9
@@ -148,8 +159,9 @@ if items_file and template_file:
                 for col_let, length in max_widths.items():
                     ws_out.column_dimensions[col_let].width = length + 2
 
-            # Final Summary Cleanup for Excel
-            summary_sheet.protection.set_password(SHEET_PASSWORD)
+            # Final Summary Cleanup
+            if enable_protection:
+                summary_sheet.protection.set_password(custom_password)
             for col in ['A', 'B', 'C', 'D']: summary_sheet.column_dimensions[col].width = 25
             for row in summary_sheet.iter_rows():
                 for cell in row: cell.border = no_border
@@ -158,18 +170,14 @@ if items_file and template_file:
             st.divider()
             sum_df = pd.DataFrame(browser_summary_data)
             
-            # 1. Top Level Metrics
             m1, m2, m3 = st.columns(3)
             m1.metric("Total Classes", len(sum_df))
             m2.metric("Total Items Distributed", sum_df["Items"].sum())
             m3.metric("Total Teams Formed", sum_df["Teams"].sum())
 
-            # 2. Composition Chart & Colorful Table
             left_col, right_col = st.columns([1, 1])
-            
             with left_col:
                 st.subheader("📋 Browser Summary")
-                # Applying custom colors to the browser table
                 st.dataframe(
                     sum_df.style.set_properties(**{'background-color': '#F9F9F9', 'color': '#2C3E50'})
                     .set_table_styles([{'selector': 'th', 'props': [('background-color', '#2C3E50'), ('color', 'white')]}])
@@ -179,20 +187,18 @@ if items_file and template_file:
 
             with right_col:
                 st.subheader("🥧 Distribution Composition")
-                # Pie Chart for Items Composition
                 fig = px.pie(sum_df[sum_df["Items"] > 0], values='Items', names='Group', 
                              hole=0.4, color_discrete_sequence=px.colors.qualitative.Prism)
                 fig.update_layout(margin=dict(t=0, b=0, l=0, r=0))
                 st.plotly_chart(fig, use_container_width=True)
 
-            # 3. Final Download Button
             output = io.BytesIO()
             wb_out.save(output)
             st.success(f"✅ Distribution Ready!")
             st.download_button(
                 label="📥 Download Smart Batcher Excel",
                 data=output.getvalue(),
-                file_name=f"Smart_Batcher_Output_{datetime.now().strftime('%H%M%S')}.xlsx",
+                file_name=f"Smart_Batcher_{datetime.now().strftime('%H%M%S')}.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
 
