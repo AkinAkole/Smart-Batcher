@@ -70,7 +70,7 @@ custom_password = "Smart_File_Lock"
 if enable_protection:
     custom_password = st.sidebar.text_input("Set Sheet Password", value="Smart_File_Lock", type="password")
 
-st.markdown("Upload your files below to generate the distribution.")
+#st.markdown("Upload your files below to generate the distribution.")
 
 # --- SETTINGS & STYLES ---
 summary_header_fill = PatternFill(start_color="2C3E50", end_color="2C3E50", fill_type="solid")
@@ -255,6 +255,7 @@ if items_file and template_file:
 
         except Exception as e:
             st.error(f"An error occurred: {e}")
+
 
 
 
