@@ -1,6 +1,3 @@
-I’ve got the full, corrected script ready for you. I have meticulously restored the Auto-Width logic (ensuring long names aren't cut off), integrated the Grand Totals in the Excel Summary, and kept your Tabbed Layout with the custom sidebar security.
-This is the "Production Ready" version of your Smart Batcher.
-Python
 import streamlit as st
 import pandas as pd
 import random
@@ -245,4 +242,3 @@ with tab2:
             st.download_button("📥 Download PDF Manual", f, "Smart_Batcher_Manual.pdf")
     except:
         st.caption("PDF Manual file not found in local directory.")
-You're all set! Long names will now have plenty of breathing room, and your summary totals are bold and ready for reporting. Is there anything else you'd like to tweak before launch?
